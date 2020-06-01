@@ -7,7 +7,7 @@ const canvas = document.getElementById("canvas");
 const gl = canvas.getContext('webgl');
 
 const app = async () => {
-	const { program, positionAttributeLocation, positionBuffer } = await initializeApp(gl);
+	const { program, positionAttributeLocation, positionBuffer, resolutionUniformLocation } = await initializeApp(gl);
 	webglUtils.resizeCanvasToDisplaySize(gl.canvas);
 
     /**
@@ -25,6 +25,9 @@ const app = async () => {
 
 	// We tell WebGL which shader program to execute. (pair of shaders)
 	gl.useProgram(program);
+
+	// set u_resolution value
+	gl.uniform2f(resolutionUniformLocation, gl.canvas.clientWidth, gl.canvas.clientHeight);
 
     /**
      * Next we need to tell WebGL how to take data from the buffer we setup above and
@@ -69,10 +72,10 @@ const app = async () => {
 	// After all that we can finally ask WebGL to execute our GLSL program.
 	const primitiveType = gl.TRIANGLES;
 	const offset2 = 0;
-	const count = 3;
+	const count = 6; //update count to 6 such that WebGl will parse all 6 points
 	gl.drawArrays(primitiveType, offset2, count);
     /**
-     * Because the count is 3 this will execute our vertex shader 3 times.
+     * Because the count is 6 this will execute our vertex shader 6 times.
      * The first time a_position.x and a_position.y in our vertex shader attribute
      * will be set to the first 2 values from the positionBuffer.
      * The second time a_position.x and a_position.y will be set to the second 2 values.
@@ -113,6 +116,10 @@ const initializeApp = async (gl) => {
      */
 	const positionAttributeLocation = gl.getAttribLocation(program, "a_position");
 
+	// get the location of u_resolution
+	const resolutionUniformLocation = gl.getUniformLocation(program, "u_resolution");
+
+
 	// Attributes get their data from buffers so we need to create a buffer
 	const positionBuffer = gl.createBuffer();
 
@@ -127,11 +134,14 @@ const initializeApp = async (gl) => {
 
 	// Now we can put data in that buffer by referencing it through the bind point
 	// three 2d points
-	const positions = [
-		0, 0,
-		0, 0.5,
-		0.7, 0,
-	];
+	const positions = [ // Update positions in pixel form
+		10, 60,
+		10, 240,
+		290, 60,
+		290, 60,
+		290, 240,
+		10, 240,
+	  ];
 
     /**
      * gl.bufferData copies the data to the positionBuffer on the GPU.
@@ -153,7 +163,7 @@ const initializeApp = async (gl) => {
      * Code that gets run once when we load the page.
      * The code below this point is rendering code or code that should get executed each time we want to render/draw.
      */
-	return { program, positionAttributeLocation, positionBuffer };
+	return { program, positionAttributeLocation, positionBuffer, resolutionUniformLocation };
 }
 
 /**
