@@ -7,22 +7,19 @@ const canvas = document.getElementById("canvas");
 const gl = canvas.getContext('webgl');
 
 const app = async () => {
-	const { program, positionAttributeLocation, positionBuffer, resolutionUniformLocation } = await initializeApp(gl);
-	webglUtils.resizeCanvasToDisplaySize(gl.canvas);
+	const { positionAttributeLocation, colorUniformLocation } = await initializeApp(gl);
 
 	gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-
 	gl.clearColor(0, 0, 0, 0);
 	gl.clear(gl.COLOR_BUFFER_BIT);
 
-	gl.useProgram(program);
-
-	gl.uniform2f(resolutionUniformLocation, gl.canvas.clientWidth, gl.canvas.clientHeight);
-
 	gl.enableVertexAttribArray(positionAttributeLocation);
 
+	// Attributes get their data from buffers so we need to create a buffer
+	const positionBuffer = gl.createBuffer();
 	gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
 
+	// Tell the attribute how to get data out of positionBuffer (ARRAY_BUFFER)
 	const size = 2;          // 2 components per iteration
 	const type = gl.FLOAT;   // the data is 32bit floats
 	const normalize = false; // don't normalize the data
@@ -34,45 +31,65 @@ const app = async () => {
      * The attribute will continue to use positionBuffer.
      */
 
-	// ask WebGL to execute our GLSL program.
-	const primitiveType = gl.TRIANGLES;
-	const offset2 = 0;
-	const count = 6;
-	gl.drawArrays(primitiveType, offset2, count);
+	// *********
+	// draw 50 random rectangles in random colors
+	for (var ii = 0; ii < 50; ii++) {
+		// Setup a random rectangle
+		// This will write to positionBuffer because
+		// its the last thing we bound on the ARRAY_BUFFER
+		// bind point
+		setRandomRectangle(gl);
+
+		// Set a random color.
+		gl.uniform4f(colorUniformLocation, Math.random(), Math.random(), Math.random(), 1);
+
+		// Draw the rectangle.
+		gl.drawArrays(gl.TRIANGLES, 0, 6); // (primitiveType, offset, count)
+	}
 }
 window.addEventListener('load', app);
 
 
+// Fills the buffer with the values that define a rectangle.
+const setRandomRectangle = (gl) => {
+	var x1 = randomInt(0, gl.canvas.clientWidth);
+	var x2 = x1 + randomInt(-gl.canvas.clientWidth/2, gl.canvas.clientWidth/2);
+	var y1 = randomInt(0, gl.canvas.clientWidth);
+	var y2 = y1 + randomInt(-gl.canvas.clientHeight/2, gl.canvas.clientHeight/2);
 
+	// NOTE: gl.bufferData(gl.ARRAY_BUFFER, ...) will affect
+	// whatever buffer is bound to the `ARRAY_BUFFER` bind point
+	// but so far we only have one buffer. If we had more than one
+	// buffer we'd want to bind that buffer to `ARRAY_BUFFER` first.
+
+	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+		x1, y1,
+		x2, y1,
+		x1, y2,
+		x1, y2,
+		x2, y1,
+		x2, y2]), gl.STATIC_DRAW);
+}
 
 
 const initializeApp = async (gl) => {
 	// will created a GLSL program on the GPU
-	const { program, vertexShader, fragmentShader } = await initializeProgram(gl);
+	const program = await initializeProgram(gl);
+	gl.useProgram(program);
 
-	const positionAttributeLocation = gl.getAttribLocation(program, "a_position");
+	webglUtils.resizeCanvasToDisplaySize(gl.canvas);
+
 	const resolutionUniformLocation = gl.getUniformLocation(program, "u_resolution");
+	gl.uniform2f(resolutionUniformLocation, gl.canvas.clientWidth, gl.canvas.clientHeight);
 
-
-	// Attributes get their data from buffers so we need to create a buffer
-	const positionBuffer = gl.createBuffer();
-	gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-	const positions = [
-		10, 60,
-		10, 240,
-		290, 60,
-		290, 60,
-		290, 240,
-		10, 240,
-	  ];
-	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
-
+	const colorUniformLocation = gl.getUniformLocation(program, "u_color");
+	const positionAttributeLocation = gl.getAttribLocation(program, "a_position");
     /**
      * The code up to this point is initialization code.
      * Code that gets run once when we load the page.
      * The code after this point is rendering code or code that should get executed each time we want to render/draw.
      */
-	return { program, positionAttributeLocation, positionBuffer, resolutionUniformLocation };
+	return { program, positionAttributeLocation, colorUniformLocation };
 }
 
 /**
@@ -87,7 +104,7 @@ const initializeProgram = async (gl) => {
 	const vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexShader_sourceCode);
 	const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShader_sourceCode);
 	const program = createProgram(gl, vertexShader, fragmentShader);
-	return { program, vertexShader, fragmentShader };
+	return program;
 }
 
 /**

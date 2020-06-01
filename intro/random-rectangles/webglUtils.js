@@ -18,3 +18,12 @@ window.webglUtils = new class webglUtils {
         }
     }
 }
+
+/**
+ * @param {Number} min - Minimum
+ * @param {Number} max - Maximum
+ * @returns {Number} Random Integer between MIN and MAX passed
+ */
+window.randomInt = (min, max) => {
+    return Math.round(Math.random() * (max - min) + min)
+}
